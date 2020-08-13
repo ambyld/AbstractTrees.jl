@@ -86,9 +86,11 @@ function print_prefix(io, depth, charset, active_levels)
     end
 end
 
+print_index(io, ind) = print(io, '(', ind, ") ")
+
 function _print_tree(printnode::Function, io::IO, tree, maxdepth = 5; indicate_truncation = true,
                      depth = 0, active_levels = Int[], charset = TreeCharSet(), withinds = false,
-                     inds = [], from = nothing, to = nothing, roottree = tree)
+                     inds = [], from = nothing, to = nothing, roottree = tree, print_ind = false)
     nodebuf = IOBuffer()
     isa(io, IOContext) && (nodebuf = IOContext(nodebuf, io))
     if withinds
@@ -108,6 +110,7 @@ function _print_tree(printnode::Function, io::IO, tree, maxdepth = 5; indicate_t
     if c !== ()
         if depth < maxdepth
             s = Iterators.Stateful(from === nothing ? pairs(c) : Iterators.Rest(pairs(c), from))
+            num_children = print_ind ? length(s) : 0
             while !isempty(s)
                 ind, child = popfirst!(s)
                 ind === to && break
@@ -121,10 +124,11 @@ function _print_tree(printnode::Function, io::IO, tree, maxdepth = 5; indicate_t
                     child_active_levels = push!(copy(active_levels), depth)
                 end
                 print(io, charset.dash, ' ')
+                print_ind && num_children > 1 && print_index(io, ind)
                 print_tree(printnode, io, child, maxdepth;
                 indicate_truncation=indicate_truncation, depth = depth + 1,
                 active_levels = child_active_levels, charset = charset, withinds=withinds,
-                inds = withinds ? [inds; ind] : [], roottree = roottree)
+                inds = withinds ? [inds; ind] : [], roottree = roottree, print_ind = print_ind)
             end
         elseif indicate_truncation
             print_prefix(io, depth, charset, active_levels)
